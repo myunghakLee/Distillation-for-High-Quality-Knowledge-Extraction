@@ -1,6 +1,9 @@
 # Distillation for High-Quality Knowledge Extraction via Explainable Oracle Approach
 
 
+PyTorch official implementation of (Myunghak Lee, Wooseong Cho, Sungsik Kim, Jinkyu Kim, and Jaekoo Lee. "Distillation for High-Quality Knowledge
+Extraction via Explainable Oracle Approach" BMVC, 2023).
+
 ## Description
 ![image](https://github.com/myunghakLee/2022IEEE/assets/12128784/013273d4-4846-4627-a8c1-478df68fd625)
 An overview of our proposed knowledge distillation method, which consists of two main steps: (A) Generating Relevance-Reinforced Inputs and (B) Transfer Knowledge via Oracle Teacher Model. In Step (A), we generate $\mathbf{x}^*$ where input pixels that make the model correctly classify are reinforced. \revised{And in Step (B) this reinforced data is then used to extract the teacher model's responses for the classification task, transferring them into the student model.
