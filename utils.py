@@ -1,11 +1,11 @@
 import torch.backends.cudnn as cudnn
 import torch
 
-from tqdm import tqdm
 import numpy as np
 import random
 import datetime
 import json
+
 
 def set_seed(seed=0):
     torch.manual_seed(seed)
@@ -18,21 +18,34 @@ def set_seed(seed=0):
 
 
 def get_save_dir(args):
-    save_dir = f"student_models/{args.data}/{args.save_dir_name}/{args.model_t}_2_{args.model_s}_{args.lrp_gamma}_{args.ce_weight}______"
+    save_dir = f"student_models_ckpt/{args.data}/{args.save_dir_name}/{args.model_t}_2_{args.model_s}/"
 
-    d = datetime.datetime.now()
-    save_dir += (
-        str(d)
-        .replace("-", "_")
-        .replace(" ", "_")
-        .replace(":", "_")
-        .replace(".", "_")[5:-5]
-        + "/"
-    )
+    # d = datetime.datetime.now()
+    # save_dir += (
+    #     str(d)
+    #     .replace("-", "_")
+    #     .replace(" ", "_")
+    #     .replace(":", "_")
+    #     .replace(".", "_")[5:-5]
+    #     + "/"
+    # )
     return save_dir
 
 
-def save_model(save_dir, module_list, args, train_losses, train_acc1s, train_acc5s, test_acc1s, test_acc5s, train_acc1_T, args_dict, option="best"):
+def save_model(
+    save_dir,
+    module_list,
+    args,
+    train_losses,
+    train_acc1s,
+    train_acc5s,
+    test_acc1s,
+    test_acc5s,
+    train_acc1_T,
+    args_dict,
+    option="best",
+    time_consume=0,
+):
     model_save_dir = f"{save_dir}/{option}.pth"
     torch.save(module_list[0].state_dict(), model_save_dir)
 
@@ -49,13 +62,16 @@ def save_model(save_dir, module_list, args, train_losses, train_acc1s, train_acc
                 "train_acc1_T": train_acc1_T,
                 "max_test_acc": [max(test_acc1s), max(test_acc5s)],
                 "args": args_dict,
+                "time_consume": time_consume,
             },
             f,
             indent=4,
         )
 
 
-def train_kd(module_list, optimizer, criterion, train_loader, device, refiner, args):
+def train_kd(
+    module_list, optimizer, criterion, train_loader, device, refiner, args, rec_num=1
+):
     module_list[0].train()
     module_list[1].eval()
 
@@ -74,10 +90,18 @@ def train_kd(module_list, optimizer, criterion, train_loader, device, refiner, a
 
     for batch_idx, (inputs, targets) in enumerate(train_loader):
         inputs, targets = inputs.to(device), targets.to(device)
-        input_lrp = refiner.get_refined_image(inputs, targets)
+        reinforced_data = refiner.get_refined_image(inputs, targets)
+
+        for _ in range(1, args.rec_num):
+            for name, param in model_t.named_parameters():
+                if param.grad is not None:
+                    param.grad = None
+            reinforced_data = refiner.get_refined_image(
+                reinforced_data.detach(), targets
+            )
 
         with torch.no_grad():
-            output_t = model_t(input_lrp)
+            output_t = model_t(reinforced_data)
 
         _, output_s = model_s(inputs, is_feat=True)
 
@@ -141,6 +165,7 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
+
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k"""
     with torch.no_grad():
@@ -157,6 +182,7 @@ def accuracy(output, target, topk=(1,)):
             res.append(correct_k.mul_(1.0 / batch_size))
         return res
 
+
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
     if epoch in args.schedule:
@@ -164,6 +190,7 @@ def adjust_learning_rate(optimizer, epoch, args):
         for param_group in optimizer.param_groups:
             param_group["lr"] = args.lr
             print(param_group["lr"])
+
 
 class Refiner:
     def __init__(self, teacher, lrp_gamma=1.0):
@@ -179,9 +206,9 @@ class Refiner:
         loss = self.criterion_ce(output, label)
         loss.backward()
 
-        return self.get_adversarial_img_v1_abs(img) # refined image
+        return self.get_adversarial_img_v1_abs(img)  # refined image
 
     def get_adversarial_img_v1_abs(self, img, sine=1):
         perturbation = img.grad * torch.abs(img.detach())
         output_img = img - perturbation * sine * self.lrp_gamma
-        return output_img    
+        return output_img

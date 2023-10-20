@@ -6,10 +6,6 @@ import torch
 from time import time
 import numpy as np
 import argparse
-import datetime
-import random
-import shutil
-import json
 import copy
 import os
 
@@ -18,54 +14,49 @@ from KD import DistillKL
 import models
 import utils
 
+
 def main():
-    utils.set_seed()
+    #     utils.set_seed()
     parser = argparse.ArgumentParser()
 
     # Data
-    parser.add_argument('--data_dir', type=str, default='./data')
-    parser.add_argument('--data', type=str, default='cifar10')
+    parser.add_argument("--data_dir", type=str, default="./data")
+    parser.add_argument("--data", type=str, default="cifar10")
 
     # Training
-    parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--epochs', type=int, default=200)
-    parser.add_argument('--lr', type=float, default=0.1)
-    parser.add_argument('--lr_decay', type=float, default=0.1)
-    parser.add_argument('--weight_decay', type=float, default=5e-4)
-    parser.add_argument('--momentum', type=float, default=0.9)
-    parser.add_argument('--schedule', default=[150, 180, 210], type=int, nargs='+')
-    parser.add_argument('--epoch', default=240, type=int)
+    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--epochs", type=int, default=200)
+    parser.add_argument("--lr", type=float, default=0.05)
+    parser.add_argument("--lr_decay", type=float, default=0.1)
+    parser.add_argument("--weight_decay", type=float, default=0.00025)
+    parser.add_argument("--momentum", type=float, default=0.9)
+    parser.add_argument("--schedule", default=[150, 180, 210], type=int, nargs="+")
+    parser.add_argument("--epoch", default=240, type=int)
 
     # KD option
-    parser.add_argument('--alpha', type=float, default=0.9, help='weight for KD (Hinton)')
-    parser.add_argument('--beta', type=float, default=200)
-    parser.add_argument('--ce_weight', type=float, default=1.0)
-    parser.add_argument('--lrp_temperature', type=float, default=4)
-    parser.add_argument('--model_t', type=str, default='')
-    parser.add_argument('--model_s', type=str, default='')
-    parser.add_argument('--lrp_gamma', type=float, default=1.0, help='intensity of GI(gradient*input)')
-    parser.add_argument('--temperature', default=4, type=float)
-    parser.add_argument('--save_dir_name', type=str, default='')
-    parser.add_argument('--test_student', action='store_true', help='Test before distillation')
-    parser.add_argument('--test_teacher', action='store_true', help='Test before distillation')
+    parser.add_argument("--alpha", type=float, default=1.0, help="weight for KD (Hinton)")
+    parser.add_argument("--ce_weight", type=float, default=1.0)
+    parser.add_argument("--model_t", type=str, default="")
+    parser.add_argument("--model_s", type=str, default="")
+    parser.add_argument("--lrp_gamma", type=float, default=1.0, help="intensity of GI(gradient*input)")
+    parser.add_argument("--temperature", default=4, type=float)
+    parser.add_argument("--save_dir_name", type=str, default="")
+    parser.add_argument("--test_student", action="store_true", help="Test before distillation")
+    parser.add_argument("--test_teacher", action="store_true", help="Test before distillation")
+    parser.add_argument("--rec_num", type=int, default=1)
 
     args = parser.parse_args()
     args_dict = copy.deepcopy(vars(args))
     device = torch.device("cuda")
 
-
-    train_loader, test_loader, args.num_classes, args.image_size = \
-        create_loader(args.batch_size, args.data_dir, args.data)
+    train_loader, test_loader, args.num_classes, args.image_size = create_loader(
+        args.batch_size, args.data_dir, args.data
+    )
 
     model_t = models.__dict__[args.model_t](num_classes=args.num_classes)
     model_s = models.__dict__[args.model_s](num_classes=args.num_classes)
 
-    if args.data == "CIFAR100":
-        trained_dir = f"teacher_models/CIFAR100/{args.model_t}/model.pth"
-
-    elif args.data == "CIFAR10":
-        trained_dir = f"teacher_models/CIFAR10/{args.model_t}/best.pth"
-
+    trained_dir = f"teacher_models_ckpt/{args.data}/{args.model_t}/model.pth"
     model_t.load_state_dict(torch.load(trained_dir))
 
     model_t.eval()
@@ -97,7 +88,6 @@ def main():
     module_list = module_list.to(device)
     criterion.cuda()
 
-
     if args.test_teacher:
         print(f"TEST TEACHER MODEL[{args.model_t}]!!")
 
@@ -121,7 +111,8 @@ def main():
 
     best_acc = 0
 
-    utils.set_seed()
+    # utils.set_seed()
+    total_time = time()
     for epoch in range(1, args.epoch + 1):
         s2 = time()
         utils.adjust_learning_rate(optimizer, epoch, args)
@@ -144,12 +135,36 @@ def main():
         test_acc5s.append(test_acc5.item())
 
         if best_acc < test_acc1:
-            utils.save_model(save_dir, module_list, args, train_losses, train_acc1s, train_acc5s, test_acc1s, test_acc5s, train_acc1_T, args_dict)
+            utils.save_model(
+                save_dir,
+                module_list,
+                args,
+                train_losses,
+                train_acc1s,
+                train_acc5s,
+                test_acc1s,
+                test_acc5s,
+                train_acc1_T,
+                args_dict,
+            )
 
         print(f"time consume : {round(time() - s2, 3)}\n")
 
-    
-    utils.save_model(save_dir, module_list, args, train_losses, train_acc1s, train_acc5s, test_acc1s, test_acc5s, train_acc1_T, args_dict, option="last")
+    utils.save_model(
+        save_dir,
+        module_list,
+        args,
+        train_losses,
+        train_acc1s,
+        train_acc5s,
+        test_acc1s,
+        test_acc5s,
+        train_acc1_T,
+        args_dict,
+        option="last",
+        time_consume=round(time() - total_time, 3),
+    )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
