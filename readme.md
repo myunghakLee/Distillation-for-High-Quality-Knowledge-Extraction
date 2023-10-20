@@ -33,3 +33,10 @@ python main.py \
     --lrp_gamma 0.2 --ce_weight 1.0  --beta 100 --alpha 1.0 \
     --weight_decay 0.0001
 ```
+
+If you want to test the student model, use it.
+```
+python test.py --data_dir data --data CIFAR100 \
+               --model_path student_models/CIFAR100/Hetero/resnet20_2_resnet20/best.pth \
+               --model resnet20
+```
