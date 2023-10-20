@@ -5,7 +5,7 @@ PyTorch official implementation of (Myunghak Lee, Wooseong Cho, Sungsik Kim, Jin
 Extraction via Explainable Oracle Approach" BMVC, 2023).
 
 ## Description
-![image](![image](https://github.com/myunghakLee/Distillation-for-High-Quality-Knowledge-Extraction/assets/12128784/31775fd9-e118-494a-9cfe-edcaec7cf469))
+![image](https://github.com/myunghakLee/Distillation-for-High-Quality-Knowledge-Extraction/assets/12128784/31775fd9-e118-494a-9cfe-edcaec7cf469)
 An overview of our proposed knowledge distillation method, which consists of two main steps: (A) Generating Relevance-Reinforced Inputs and (B) Transfer Knowledge via Oracle Teacher Model. In Step (A), we generate $\mathbf{x}^*$ where input pixels that make the model correctly classify are reinforced. And in Step (B) this reinforced data is then used to extract the teacher model's responses for the classification task, transferring them into the student model.
 
 Although our model can show very high accuracy, it cannot be used in real situations because ground truth information must be known in advance. So we can't use oracle model directly in real situation. Therefore, we will use the knowledge selected by the oracle teacher model to learn a student model that can make inferences without prior information about the ground truth.
