@@ -1,4 +1,4 @@
-# Distillation for High-Quality Knowledge Extraction via Explainable Oracle Approach
+\href{https://papers.bmvc2023.org/0665.pdf}{# Distillation for High-Quality Knowledge Extraction via Explainable Oracle Approach}
 
 
 PyTorch official implementation of (Myunghak Lee, Wooseong Cho, Sungsik Kim, Jinkyu Kim, and Jaekoo Lee. "Distillation for High-Quality Knowledge
